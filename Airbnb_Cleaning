@@ -1,0 +1,259 @@
+select distinct(neighbourhood_group_cleansed) from listings2;
+
+UPDATE listings2
+SET neighbourhood_group = REPLACE(neighbourhood_group, '�', 'ö');
+
+SELECT * FROM listings2
+WHERE host_name IS NULL 
+AND price IS NULL 
+AND host_identity_verified IS NULL;
+
+Delete FROM listings2
+WHERE id IN (
+1528556,
+3662999,
+6692587,
+6710453,
+7536497,
+7595499,
+7599452,
+8714320,
+10517224
+);
+
+
+
+
+SELECT AVG(price) AS mean_price
+FROM listings2
+WHERE price IS NOT NULL;
+WITH stats AS (
+SELECT AVG(price) AS mean_price
+FROM listings2
+WHERE price IS NOT NULL
+),
+variance AS (
+SELECT AVG((price - (SELECT mean_price FROM stats)) * (price - (SELECT mean_price FROM stats))) AS variance
+FROM listings2
+WHERE price IS NOT NULL
+)
+SELECT SQRT(variance) AS stddev_price
+FROM variance;
+
+
+WITH stats AS (
+SELECT AVG(price) AS mean_price
+FROM listings2
+WHERE price IS NOT NULL
+),
+variance AS (
+SELECT AVG((price - (SELECT mean_price FROM stats)) * (price - (SELECT mean_price FROM stats))) AS variance
+FROM listings2
+WHERE price IS NOT NULL
+),
+stddev AS (
+SELECT SQRT(variance) AS stddev_price
+FROM variance
+)
+SELECT listings2.*, 
+(price - (SELECT mean_price FROM stats)) / (SELECT stddev_price FROM stddev) AS z_score
+FROM listings2, stats, stddev
+WHERE ABS((price - (SELECT mean_price FROM stats)) / (SELECT stddev_price FROM stddev)) > 3;
+
+
+DELETE FROM listings2
+WHERE id IN (
+    2860420,
+    7807397,
+    16799799,
+    29022524,
+    29509865,
+    29509869,
+    36165198,
+    39877586,
+    41224162,
+    41897771,
+    41924747,
+    41787739,
+    648389751444769673,
+    662966098610376381,
+    965294059855869245,
+    993210282733742154);
+
+
+
+
+
+CREATE TEMPORARY TABLE avg_price_group AS
+SELECT 
+neighbourhood_group_cleansed, 
+room_type, 
+AVG(price) AS avg_price
+FROM listings2
+WHERE price IS NOT NULL
+GROUP BY neighbourhood_group_cleansed, room_type;
+
+SELECT * FROM avg_price_group;
+
+SELECT 
+    neighbourhood_group_cleansed, 
+    room_type, 
+    CAST(avg_price AS INTEGER) AS avg_price_integer
+FROM avg_price_group;
+
+UPDATE listings2 
+SET price = (
+    SELECT avg_price_integer
+    FROM avg_price_group_integer
+    WHERE listings2.neighbourhood_group_cleansed = avg_price_group_integer.neighbourhood_group_cleansed
+      AND listings2.room_type = avg_price_group_integer.room_type
+)
+WHERE price IS NULL;
+
+
+
+
+CREATE TEMPORARY TABLE avg_price_group_integer AS
+SELECT 
+    neighbourhood_group_cleansed, 
+    room_type, 
+    CAST(avg_price AS INTEGER) AS avg_price_integer
+FROM avg_price_group;
+
+SELECT * FROM avg_price_group_integer;
+
+
+
+
+
+
+UPDATE listings2 
+SET price = (
+SELECT avg_price_integer
+FROM avg_price_group
+WHERE listings2.neighbourhood_group_cleansed = avg_price_group.neighbourhood_group_cleansed
+AND listings2.room_type = avg_price_group.room_type
+)WHERE price IS NULL;
+
+SELECT *
+FROM listings2
+WHERE price IS NOT NULL AND price IN (
+SELECT avg_price
+FROM avg_price_group
+);
+
+select * from listings2 where price IS NULL;
+select avg(price) from listings2;
+
+SELECT *
+FROM listings2
+WHERE price IS NOT NULL AND price IN (
+SELECT avg_price_integer
+FROM avg_price_group_integer
+);
+
+
+
+ALTER TABLE listings2
+ADD COLUMN contact_means TEXT;
+
+
+
+UPDATE listings2
+SET contact_means = CASE
+WHEN host_verifications = '[]' THEN 'No contact'
+WHEN host_verifications = "['email', 'phone', 'work_email']" THEN '3 contact means'
+WHEN host_verifications = "['email', 'phone']" 
+OR host_verifications = "['email', 'work_email']" 
+OR host_verifications = "['phone', 'work_email']" THEN '2 contact means'
+WHEN host_verifications = "['email']" 
+OR host_verifications = "['phone']" 
+OR host_verifications = "['work_email']" THEN '1 contact means'
+ELSE 'No contact'
+END;
+
+
+SELECT contact_means, COUNT(*) AS count
+FROM listings2
+GROUP BY contact_means;
+
+
+SELECT host_verifications, COUNT(*) AS count
+FROM listings2
+GROUP BY host_verifications;
+
+
+
+SELECT AVG(price) AS mean_price
+FROM listings2
+WHERE price IS NOT NULL;
+WITH stats AS (
+SELECT AVG(price) AS mean_price
+FROM listings2
+WHERE price IS NOT NULL
+),
+variance AS (
+SELECT AVG((price - (SELECT mean_price FROM stats)) * (price - (SELECT mean_price FROM stats))) AS variance
+FROM listings2
+WHERE price IS NOT NULL
+)
+SELECT SQRT(variance) AS stddev_price
+FROM variance;
+
+
+WITH stats AS (
+SELECT AVG(price) AS mean_price
+FROM listings2
+WHERE price IS NOT NULL
+),
+variance AS (
+SELECT AVG((price - (SELECT mean_price FROM stats)) * (price - (SELECT mean_price FROM stats))) AS variance
+FROM listings2
+WHERE price IS NOT NULL
+),
+stddev AS (
+SELECT SQRT(variance) AS stddev_price
+FROM variance
+)
+SELECT listings2.*, 
+(price - (SELECT mean_price FROM stats)) / (SELECT stddev_price FROM stddev) AS z_score
+FROM listings2, stats, stddev
+WHERE ABS((price - (SELECT mean_price FROM stats)) / (SELECT stddev_price FROM stddev)) > 3;
+
+
+
+--Calculation for number of Means of Contact 
+ALTER TABLE listings2
+ADD COLUMN contact_means TEXT;
+
+UPDATE listings2
+SET contact_means = CASE
+WHEN host_verifications = '[]' THEN 'No contact'
+WHEN host_verifications = "['email', 'phone', 'work_email']" THEN '3 contact means'
+WHEN host_verifications = "['email', 'phone']" 
+OR host_verifications = "['email', 'work_email']" 
+OR host_verifications = "['phone', 'work_email']" THEN '2 contact means'
+WHEN host_verifications = "['email']" 
+OR host_verifications = "['phone']" 
+OR host_verifications = "['work_email']" THEN '1 contact means'
+ELSE 'No contact'
+END;
+
+
+--Create temporary table to calc the AVG Price per neighborhood group and room type
+CREATE TEMPORARY TABLE avg_price_group AS
+SELECT 
+neighbourhood_group_cleansed, 
+room_type, 
+AVG(price) AS avg_price
+FROM listings2
+WHERE price IS NOT NULL
+GROUP BY neighbourhood_group_cleansed, room_type;
+
+UPDATE listings2 
+SET price = (
+SELECT avg_price
+FROM avg_price_group
+WHERE listings2.neighbourhood_group_cleansed = avg_price_group.neighbourhood_group_cleansed
+AND listings2.room_type = avg_price_group.room_type
+)WHERE price IS NULL;
