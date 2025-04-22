@@ -1,0 +1,10 @@
+
+
+
+{{ ref('model_name') }}
+-- this macro is to tell the dbt to make table rather than a view which is the default. but instead I am now changing the project.yml file to materialize an entire folder, for example marts a table
+{{
+    config(
+        materialized= 'table'
+    )
+}}
